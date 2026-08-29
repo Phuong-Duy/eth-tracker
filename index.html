@@ -2,51 +2,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ETHUSDT | Binance Realtime</title>
     <link id="favicon" rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             background-color: #0b0e14;
             color: #f8fafc;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
         .container {
             display: flex;
             flex-direction: column;
-            width: 100%;
+            width: 100vw;
             height: 100vh;
-            padding: 1rem;
+            padding: 0.75rem;
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.8rem;
-            padding: 0 0.5rem;
-            gap: 1rem;
+            margin-bottom: 0.5rem;
+            gap: 0.5rem;
         }
         .left-header {
             display: flex;
             align-items: center;
-            gap: 1.2rem;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
         .symbol {
             color: #f8fafc;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 700;
         }
         .stats-bar {
             display: flex;
-            gap: 1.2rem;
-            font-size: 0.85rem;
+            gap: 1rem;
+            font-size: 0.8rem;
             color: #94a3b8;
         }
         .stat-item {
@@ -60,17 +59,17 @@
         .timeframe-selector {
             display: flex;
             background: #181e29;
-            padding: 4px;
+            padding: 3px;
             border-radius: 8px;
-            gap: 4px;
+            gap: 2px;
         }
         .tf-btn {
             background: transparent;
             border: none;
             color: #94a3b8;
-            padding: 5px 12px;
+            padding: 4px 10px;
             border-radius: 6px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -79,13 +78,14 @@
         .tf-btn.active { background: #38bdf8; color: #0f172a; }
         
         .price {
-            font-size: 2rem;
+            font-size: 1.6rem;
             font-weight: 700;
             color: #38bdf8;
             font-variant-numeric: tabular-nums;
-            padding: 4px 12px;
+            padding: 4px 8px;
             border-radius: 8px;
             transition: all 0.15s ease;
+            white-space: nowrap;
         }
         
         .flash-up {
@@ -101,17 +101,60 @@
             transform: scale(1.03);
         }
 
-        #chart-wrapper { flex: 1; width: 100%; position: relative; }
+        #chart-wrapper { 
+            flex: 1; 
+            width: 100%; 
+            position: relative;
+            min-height: 0; /* Quan trọng cho layout flexbox trên mobile */
+        }
         #chart { width: 100%; height: 100%; }
-        .status { padding-top: 0.4rem; font-size: 0.8rem; color: #22c55e; text-align: right; }
+        .status { padding-top: 0.3rem; font-size: 0.75rem; color: #22c55e; text-align: right; }
+
+        /* Tối ưu riêng cho màn hình Điện thoại (Responsive CSS) */
+        @media (max-width: 600px) {
+            .container { padding: 0.5rem; }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.4rem;
+            }
+            .header-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+            }
+            .left-header {
+                gap: 0.6rem;
+                width: 100%;
+                justify-content: space-between;
+            }
+            .symbol { font-size: 1.1rem; }
+            .price { font-size: 1.5rem; padding: 2px 6px; }
+            .stats-bar {
+                width: 100%;
+                justify-content: space-between;
+                font-size: 0.75rem;
+                background: rgba(255, 255, 255, 0.03);
+                padding: 4px 8px;
+                border-radius: 6px;
+            }
+            .stat-item {
+                flex-direction: row;
+                gap: 4px;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="header">
-            <div class="left-header">
+            <div class="header-top">
                 <div class="symbol">ETHUSDT</div>
+                <div id="price" class="price">Connecting...</div>
+            </div>
+            <div class="left-header">
                 <div class="timeframe-selector">
                     <button class="tf-btn" data-interval="1h">1H</button>
                     <button class="tf-btn active" data-interval="4h">4H</button>
@@ -119,20 +162,19 @@
                 </div>
                 <div class="stats-bar">
                     <div class="stat-item">
-                        <span>Biến động 24h</span>
+                        <span>24h:</span>
                         <span id="change-24h" class="stat-value">--</span>
                     </div>
                     <div class="stat-item">
-                        <span>Cao nhất 24h</span>
+                        <span>Cao:</span>
                         <span id="high-24h" class="stat-value">--</span>
                     </div>
                     <div class="stat-item">
-                        <span>Thấp nhất 24h</span>
+                        <span>Thấp:</span>
                         <span id="low-24h" class="stat-value">--</span>
                     </div>
                 </div>
             </div>
-            <div id="price" class="price">Connecting...</div>
         </div>
         
         <div id="chart-wrapper">
@@ -171,6 +213,9 @@
             faviconElement.href = faviconCanvas.toDataURL('image/png');
         }
 
+        // Tự động nhận diện màn hình nhỏ để thu gọn lề cho mobile
+        const isMobile = window.innerWidth <= 600;
+
         const chart = LightweightCharts.createChart(chartContainer, {
             width: chartWrapper.clientWidth,
             height: chartWrapper.clientHeight,
@@ -179,8 +224,8 @@
             timeScale: { 
                 timeVisible: true, 
                 secondsVisible: false,
-                rightOffset: 12, // Tạo khoảng trống 12 cột ở mép phải cho dính cột giá
-                barSpacing: 15   // Tăng khoảng cách giữa các nến giúp nhìn to rõ hơn
+                rightOffset: isMobile ? 6 : 12,
+                barSpacing: isMobile ? 10 : 15
             },
             rightPriceScale: { autoScale: true }
         });
@@ -206,12 +251,12 @@
 
                 candlestickSeries.setData(allCandles);
 
-                // Giới hạn chỉ hiển thị đúng khoảng 30 nến mới nhất
                 if (allCandles.length > 0) {
                     const totalBars = allCandles.length;
+                    const visibleBars = isMobile ? 22 : 30; // Mobile hiển thị 22 nến cho vừa tầm mắt
                     chart.timeScale().setVisibleLogicalRange({
-                        from: totalBars - 30,
-                        to: totalBars + 5
+                        from: totalBars - visibleBars,
+                        to: totalBars + 3
                     });
 
                     earliestTimestamp = allCandles[0].time;
@@ -251,7 +296,7 @@
                         candlestickSeries.setData(allCandles);
                     }
                 } catch (err) {
-                    console.error("Lỗi khi tải nến lịch sử:", err);
+                    console.error("Lỗi tải nến cũ:", err);
                 }
                 isFetchingHistory = false;
             }
@@ -267,8 +312,8 @@
                 changeEl.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
                 changeEl.style.color = change >= 0 ? '#22c55e' : '#ef4444';
 
-                document.getElementById('high-24h').innerText = `$${parseFloat(data.highPrice).toFixed(2)}`;
-                document.getElementById('low-24h').innerText = `$${parseFloat(data.lowPrice).toFixed(2)}`;
+                document.getElementById('high-24h').innerText = `$${parseFloat(data.highPrice).toFixed(1)}`;
+                document.getElementById('low-24h').innerText = `$${parseFloat(data.lowPrice).toFixed(1)}`;
             } catch(e) {}
         }
 
@@ -279,7 +324,7 @@
             ws = new WebSocket(streamUrl);
 
             ws.onopen = () => {
-                statusElement.innerText = `● Connected: Realtime Streaming (${interval.toUpperCase()})`;
+                statusElement.innerText = `● Streaming (${interval.toUpperCase()})`;
                 statusElement.style.color = '#22c55e';
             };
 
@@ -319,8 +364,8 @@
                     const changeEl = document.getElementById('change-24h');
                     changeEl.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
                     changeEl.style.color = change >= 0 ? '#22c55e' : '#ef4444';
-                    document.getElementById('high-24h').innerText = `$${parseFloat(data.h).toFixed(2)}`;
-                    document.getElementById('low-24h').innerText = `$${parseFloat(data.l).toFixed(2)}`;
+                    document.getElementById('high-24h').innerText = `$${parseFloat(data.h).toFixed(1)}`;
+                    document.getElementById('low-24h').innerText = `$${parseFloat(data.l).toFixed(1)}`;
                 }
             };
 
@@ -369,6 +414,7 @@
 
         loadInitialData(currentInterval);
 
+        // Tự động căn chỉnh chuẩn khi xoay ngang/dọc điện thoại
         window.addEventListener('resize', () => {
             chart.applyOptions({
                 width: chartWrapper.clientWidth,
