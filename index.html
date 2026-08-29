@@ -117,7 +117,6 @@
                     <button class="tf-btn active" data-interval="4h">4H</button>
                     <button class="tf-btn" data-interval="1d">1D</button>
                 </div>
-                <!-- Stats Header giống Binance -->
                 <div class="stats-bar">
                     <div class="stat-item">
                         <span>Biến động 24h</span>
@@ -155,7 +154,6 @@
         let currentInterval = '4h';
         let flashTimeout = null;
         
-        // Quản lý việc cuộn tải thêm nến cũ (Lazy Load)
         let isFetchingHistory = false;
         let earliestTimestamp = null;
         let allCandles = [];
@@ -178,7 +176,12 @@
             height: chartWrapper.clientHeight,
             layout: { backgroundColor: '#0b0e14', textColor: '#94a3b8' },
             grid: { vertLines: { color: '#1e293b' }, horzLines: { color: '#1e293b' } },
-            timeScale: { timeVisible: true, secondsVisible: false },
+            timeScale: { 
+                timeVisible: true, 
+                secondsVisible: false,
+                rightOffset: 12, // Tạo khoảng trống 12 cột ở mép phải cho dính cột giá
+                barSpacing: 15   // Tăng khoảng cách giữa các nến giúp nhìn to rõ hơn
+            },
             rightPriceScale: { autoScale: true }
         });
 
@@ -187,11 +190,10 @@
             borderVisible: false, wickUpColor: '#22c55e', wickDownColor: '#ef4444',
         });
 
-        // 1. Tải dữ liệu lịch sử ban đầu (1000 nến)
         async function loadInitialData(interval) {
             try {
                 isFetchingHistory = true;
-                const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=${interval}&limit=1000`);
+                const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=${interval}&limit=500`);
                 const data = await res.json();
                 
                 allCandles = data.map(d => ({
@@ -203,9 +205,15 @@
                 }));
 
                 candlestickSeries.setData(allCandles);
-                chart.timeScale().fitContent();
 
+                // Giới hạn chỉ hiển thị đúng khoảng 30 nến mới nhất
                 if (allCandles.length > 0) {
+                    const totalBars = allCandles.length;
+                    chart.timeScale().setVisibleLogicalRange({
+                        from: totalBars - 30,
+                        to: totalBars + 5
+                    });
+
                     earliestTimestamp = allCandles[0].time;
                     latestCandle = { ...allCandles[allCandles.length - 1] };
                     lastPrice = latestCandle.close;
@@ -221,13 +229,12 @@
             connectBinanceWebStream(interval);
         }
 
-        // 2. Tự động tải thêm nến cũ khi người dùng kéo cuộn lùi về quá khứ
         chart.timeScale().subscribeVisibleLogicalRangeChange(async (newRange) => {
             if (newRange && newRange.from < 10 && !isFetchingHistory && earliestTimestamp) {
                 isFetchingHistory = true;
                 try {
                     const endTimeMs = earliestTimestamp * 1000 - 1;
-                    const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=${currentInterval}&endTime=${endTimeMs}&limit=500`);
+                    const res = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=${currentInterval}&endTime=${endTimeMs}&limit=300`);
                     const olderData = await res.json();
 
                     if (olderData.length > 0) {
@@ -250,7 +257,6 @@
             }
         });
 
-        // Tải chỉ số 24h (High, Low, Change %)
         async function fetch24hTicker() {
             try {
                 const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=ETHUSDT`);
@@ -283,7 +289,6 @@
 
                 const data = response.data;
 
-                // Giá realtime từ bookTicker
                 if (data.b || data.a) {
                     const price = parseFloat(data.b); 
                     if (price && price !== lastPrice) {
@@ -297,7 +302,6 @@
                     }
                 }
 
-                // Cập nhật nến kline mới
                 if (data.k) {
                     const k = data.k;
                     latestCandle = {
@@ -310,7 +314,6 @@
                     candlestickSeries.update(latestCandle);
                 }
 
-                // Cập nhật chỉ số 24h realtime
                 if (data.P) {
                     const change = parseFloat(data.P);
                     const changeEl = document.getElementById('change-24h');
@@ -339,7 +342,7 @@
 
                 clearTimeout(flashTimeout);
                 priceElement.classList.remove('flash-up', 'flash-down');
-                void priceElement.offsetWidth; // Force Reflow
+                void priceElement.offsetWidth;
 
                 priceElement.classList.add(isUp ? 'flash-up' : 'flash-down');
 
